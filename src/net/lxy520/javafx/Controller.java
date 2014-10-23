@@ -51,24 +51,6 @@ public class Controller {
     private static final String CHECKLOGIN = "$(\"input[name=username][testpath=login-form-username]\").prop(\"outerHTML\");";
 
     /**
-     * 加载用户设置
-     */
-    public void loadSetting() {
-        if (setting!=null){
-            try {
-                logBox.setText("加载用户设置......\n\n");
-                txtUserName.setText(setting.getUserName());
-                txtPasswd.setText(setting.getPasswd());
-                txtStart.setText(setting.getStart());
-                txtInterval.setText(setting.getInterval());
-                logBox.appendText("加载用户设置成功\n\n");
-            }catch (Exception e1){
-                logBox.appendText("加载用户设置失败\n\n");
-            }
-        }
-    }
-
-    /**
      * 读取用户信息
      */
     public void readSetting() {
@@ -88,6 +70,25 @@ public class Controller {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 加载用户设置
+     */
+    public void loadSetting() {
+        if (setting!=null){
+            try {
+                logBox.setText("加载用户设置......\n\n");
+                txtUserName.setText(setting.getUserName());
+                txtPasswd.setText(setting.getPasswd());
+                txtStart.setText(setting.getStart());
+                txtInterval.setText(setting.getInterval());
+                logBox.appendText("加载用户设置成功\n\n");
+            }catch (Exception e1){
+                logBox.appendText("加载用户设置失败\n\n");
+            }
+        }
+    }
+
     /**
      * 保存软件设置
      */
@@ -144,6 +145,20 @@ public class Controller {
     }
 
     /**
+     * 临听网页加载
+     */
+    private class ChangeAction implements ChangeListener{
+        @Override
+        public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+            logBox.appendText("页面有变动,刷新中.\n");
+            if (newValue == Worker.State.SUCCEEDED) {
+                checkForLogin();//确认是否要登陆,没有登陆则登陆
+                checkAndRestartVM();//确认VM是否关闭,关闭时启动VM
+            }
+        }
+    }
+
+    /**
      * 确认是否要登陆,没有登陆则登陆
      */
     private void checkForLogin() {
@@ -155,6 +170,26 @@ public class Controller {
             webEngine1.executeScript(SETPASSWD);
             webEngine1.executeScript(COMMIT);
         }
+    }
+
+    /**
+     * 确认VM是否关闭,关闭时启动VM
+     */
+    private void checkAndRestartVM() {
+        WebEngine webEngine1 = webView.getEngine();
+        Object trunon = webEngine1.executeScript(CHECKSTATE);
+        if (trunon!=null&&!"".equals(trunon)&&!"undefined".equals(trunon)){
+            logBox.appendText("重启虚拟机中......\n\n");
+            webEngine1.executeScript(TRUNON);
+        }
+    }
+
+    /**
+     * 配置信息
+     * @param setting
+     */
+    public void setSetting(Setting setting) {
+        this.setting = setting;
     }
 
     /**
@@ -175,40 +210,5 @@ public class Controller {
         stage.setScene(s);
         stage.setTitle(title);
         stage.show();
-    }
-
-    /**
-     * 确认VM是否关闭,关闭时启动VM
-     */
-    private void checkAndRestartVM() {
-        WebEngine webEngine1 = webView.getEngine();
-        Object trunon = webEngine1.executeScript(CHECKSTATE);
-        if (trunon!=null&&!"".equals(trunon)&&!"undefined".equals(trunon)){
-            logBox.appendText("重启虚拟机中......\n\n");
-            webEngine1.executeScript(TRUNON);
-        }
-    }
-
-
-    /**
-     * 临听网页加载
-     */
-    private class ChangeAction implements ChangeListener{
-        @Override
-        public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-            logBox.appendText("页面有变动,刷新中.\n");
-            if (newValue == Worker.State.SUCCEEDED) {
-                checkForLogin();//确认是否要登陆,没有登陆则登陆
-                checkAndRestartVM();//确认VM是否关闭,关闭时启动VM
-            }
-        }
-    }
-
-    /**
-     * 配置信息
-     * @param setting
-     */
-    public void setSetting(Setting setting) {
-        this.setting = setting;
     }
 }

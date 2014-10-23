@@ -24,8 +24,6 @@ public class Start extends Application {
         super.init();
     }
 
-
-
     @Override
     public void stop() throws Exception {
         super.stop();
