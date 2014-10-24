@@ -16,12 +16,17 @@ import javafx.scene.web.WebView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import net.lxy520.config.Setting;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.nio.file.Files;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.util.Date;
+import java.util.List;
 
 public class Controller {
 
@@ -38,18 +43,39 @@ public class Controller {
     @FXML
     private TextArea logBox;
 
+    private WebEngine webEngine;
+
     private Setting setting = new Setting();
+
     public Controller() {
         System.out.println("程序启动中......");
     }
 
-    private static  String SETUSERNAME;
-    private static    String SETPASSWD;
-    private static final   String COMMIT="$(\"button[testpath=login-button]\").trigger(\"submit\");";
-    private static final String TRUNON = "$(\"button.kdbutton.turn-on.state-button.solid.green.medium.with-icon\").trigger(\"click\");";
-    private static final String CHECKSTATE = "$(\"button.kdbutton.turn-on.state-button.solid.green.medium.with-icon\").prop(\"outerHTML\");";
-    private static final String CHECKLOGIN = "$(\"input[name=username][testpath=login-form-username]\").prop(\"outerHTML\");";
-
+    private static final String restart = "function doaction(){\n" +
+            "    KD.enableLogs();\n" +
+            "    console.info(\"开始检测....\");\n" +
+            "    if(!KD.isLoggedIn()){\n" +
+            "        console.info(\"帐号未登陆,检测当前是否在登陆页面....\");\n" +
+            "        if(!(location.href==\"https://koding.com/Login\")){\n" +
+            "            console.info(\"不在登陆页面,正在打开登陆页面....\");\n" +
+            "            location.href=\"https://koding.com/Login\"\n" +
+            "        }else{\n" +
+            "            console.info(\"当前正在登陆界面,登陆中.....\");\n" +
+            "            $(\"input[name=username][testpath=login-form-username]\").val(\"{{ username }}\");\n" +
+            "            $(\"input[name=password][testpath=login-form-password]\").val(\"{{ userpasswd }}\");\n" +
+            "            $(\"button[testpath=login-button]\").trigger(\"submit\");\n" +
+            "        }\n" +
+            "    }else{\n" +
+            "        console.info(\"帐号已在线,检测是否需要重启VM\");\n" +
+            "        if($(\"button.kdbutton.turn-on.state-button.solid.green.medium.with-icon\").prop(\"outerHTML\")){\n" +
+            "            console.info(\"VM已经关闭,正在重启VM....\");\n" +
+            "            $(\"button.kdbutton.turn-on.state-button.solid.green.medium.with-icon\").trigger(\"click\");\n" +
+            "        }else{\n" +
+            "            console.info(\"VM已生动,不需要重启.\");\n" +
+            "        }\n" +
+            "    }\n" +
+            "}\n" +
+            "var restart=self.setInterval(\"doaction()\", {{ time }}*1000);";
     /**
      * 读取用户信息
      */
@@ -57,9 +83,9 @@ public class Controller {
         try {
             File file = new File("setting.json");
             if (file.exists()) {
-                String txtsetting = org.jsoup.Jsoup.parse(file, "utf-8").text();//读取文件
-                if (!txtsetting.equals("")) {
-                    Setting set = JSON.parseObject(txtsetting, Setting.class);//反序列化
+               List<String> strings = Files.readAllLines(file.toPath());
+                if (strings!=null && !strings.isEmpty()) {
+                    Setting set = JSON.parseObject(strings.get(0), Setting.class);//反序列化
                     if (set != null) {
                         setSetting(set);//设置
                         loadSetting();//加载
@@ -75,7 +101,7 @@ public class Controller {
      * 加载用户设置
      */
     public void loadSetting() {
-        if (setting!=null){
+        if (setting != null) {
             try {
                 logBox.setText("加载用户设置......\n\n");
                 txtUserName.setText(setting.getUserName());
@@ -83,7 +109,7 @@ public class Controller {
                 txtStart.setText(setting.getStart());
                 txtInterval.setText(setting.getInterval());
                 logBox.appendText("加载用户设置成功\n\n");
-            }catch (Exception e1){
+            } catch (Exception e1) {
                 logBox.appendText("加载用户设置失败\n\n");
             }
         }
@@ -115,98 +141,70 @@ public class Controller {
 
     @FXML
     public void start(ActionEvent e) {
-        if (txtUserName==null||"".equals(txtUserName.getText())){
+        if (txtUserName == null || "".equals(txtUserName.getText())) {
             logBox.appendText("用户名不能为空\n");
-            showMessage("提示","用户名不能为空");
-           return;
-        }
-        if (txtPasswd==null||"".equals(txtPasswd.getText())){
-            logBox.appendText("密码不能为空\n");
-            showMessage("提示","密码不能为空");
+            showMessage("提示", "用户名不能为空");
             return;
         }
-        SETUSERNAME="$(\"input[name=username][testpath=login-form-username]\").val(\""+txtUserName.getText()+"\");";
-        SETPASSWD="$(\"input[name=password][testpath=login-form-password]\").val(\""+txtPasswd.getText()+"\");";
-        Long start = Long.valueOf(txtStart.getText());
-        Long interval = Long.valueOf(txtInterval.getText());
+        if (txtPasswd == null || "".equals(txtPasswd.getText())) {
+            logBox.appendText("密码不能为空\n");
+            showMessage("提示", "密码不能为空");
+            return;
+        }
         saveSetting();
-        WebEngine webEngine = webView.getEngine();
-        webEngine.load("https://koding.com/Login");
+        getWebEngine().load("https://koding.com/IDE");
         logBox.appendText("系统启动中......\n");
-        webEngine.getLoadWorker().stateProperty().addListener(new ChangeAction());
-        Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                webView.getEngine().load("https://koding.com/IDE");
-                logBox.appendText("刷新页面......\n\n");
-            }
-        },1000*60*start,1000*60*interval);
+        getWebEngine().getLoadWorker().stateProperty().addListener(new ChangeAction());
+        getWebEngine().getLoadWorker().messageProperty().addListener(new ChangeAction());
     }
 
     /**
      * 临听网页加载
      */
-    private class ChangeAction implements ChangeListener{
+    private class ChangeAction implements ChangeListener {
         @Override
         public void changed(ObservableValue observable, Object oldValue, Object newValue) {
             logBox.appendText("页面有变动,刷新中.\n");
             if (newValue == Worker.State.SUCCEEDED) {
-                checkForLogin();//确认是否要登陆,没有登陆则登陆
-                checkAndRestartVM();//确认VM是否关闭,关闭时启动VM
+                logBox.appendText("页面加载成功,执行JS代码......\n");
+                String reStart = restart.replaceAll("\\{\\{ username }\\}",txtUserName.getText()).replaceAll("\\{\\{ userpasswd \\}\\}",txtPasswd.getText()).replaceAll("\\{\\{ time \\}\\}",txtInterval.getText());
+                getWebEngine().executeScript(reStart);
+            }else {
+                logBox.appendText(ZonedDateTime.now().toLocalTime()+":"+newValue.toString()+"\n");
             }
         }
     }
 
     /**
-     * 确认是否要登陆,没有登陆则登陆
-     */
-    private void checkForLogin() {
-        WebEngine webEngine1 = webView.getEngine();
-        Object login = webEngine1.executeScript(CHECKLOGIN);
-        if (login!=null&&!"".equals(login)&&!"undefined".equals(login)){
-            logBox.appendText("登陆中......\n\n");
-            webEngine1.executeScript(SETUSERNAME);
-            webEngine1.executeScript(SETPASSWD);
-            webEngine1.executeScript(COMMIT);
-        }
-    }
-
-    /**
-     * 确认VM是否关闭,关闭时启动VM
-     */
-    private void checkAndRestartVM() {
-        WebEngine webEngine1 = webView.getEngine();
-        Object trunon = webEngine1.executeScript(CHECKSTATE);
-        if (trunon!=null&&!"".equals(trunon)&&!"undefined".equals(trunon)){
-            logBox.appendText("重启虚拟机中......\n\n");
-            webEngine1.executeScript(TRUNON);
-        }
-    }
-
-    /**
      * 配置信息
+     *
      * @param setting
      */
     public void setSetting(Setting setting) {
         this.setting = setting;
     }
 
+    public WebEngine getWebEngine() {
+        webView.getEngine().setUserAgent("Mozilla/5.0 (ArchLinux Linux 3.16) AppleWebKit/537.36 (KHTML, like Gecko) Maxthon/4.0 Chrome/30.0.1599.101 Safari/537.36");
+        return webView.getEngine();
+    }
+
     /**
      * 消息框
+     *
      * @param message 消息
      */
-    private void showMessage(String title ,String message){
+    private void showMessage(String title, String message) {
         Stage stage = new Stage();
         stage.initModality(Modality.APPLICATION_MODAL);
         VBox v = new VBox();
         v.setAlignment(Pos.CENTER);
         Label l = new Label(message);
-        l.setPadding(new Insets(0,0,10,0));
+        l.setPadding(new Insets(0, 0, 10, 0));
         Button btn = new Button("确定");
-        btn.setOnAction(e-> stage.close());
-        v.getChildren().addAll(l,btn);
-        Scene s = new Scene(v,300,100);
+        btn.setOnAction(e -> stage.close());
+        v.getChildren().addAll(l, btn);
+        Scene s = new Scene(v, 300, 100);
         stage.setScene(s);
         stage.setTitle(title);
         stage.show();

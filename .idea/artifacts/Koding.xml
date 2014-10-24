@@ -16,7 +16,6 @@
       <element id="archive" name="Koding.jar">
         <element id="module-output" name="Koding" />
       </element>
-      <element id="library" level="project" name="jsoup-1.7.3" />
     </root>
   </artifact>
 </component>
