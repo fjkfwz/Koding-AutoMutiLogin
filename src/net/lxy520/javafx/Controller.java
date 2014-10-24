@@ -56,7 +56,7 @@ public class Controller {
             "    console.info(\"开始检测....\");\n" +
             "    if(!KD.isLoggedIn()){\n" +
             "        console.info(\"帐号未登陆,检测当前是否在登陆页面....\");\n" +
-            "        if(!(location.href==\"https://koding.com/Login\")){\n" +
+            "        if(!(location.href==\"https://koding.com/Login\")&&!(location.href==\"https://koding.com/#!/Login\")){\n" +
             "            console.info(\"不在登陆页面,正在打开登陆页面....\");\n" +
             "            location.href=\"https://koding.com/Login\"\n" +
             "        }else{\n" +
@@ -75,7 +75,13 @@ public class Controller {
             "        }\n" +
             "    }\n" +
             "}\n" +
-            "var restart=self.setInterval(\"doaction()\", {{ time }}*1000);";
+            "var restart=self.setInterval(\"doaction()\", {{ time }});";
+
+            private static final String worker = "function worker(){\n" +
+            "    KD.enableLogs();\n" +
+            "    location.href=\"https://koding.com/IDE\";\n" +
+            "}\n" +
+            "var workerright = self.setTimeout(\"worker()\", {{ time }});";
     /**
      * 读取用户信息
      */
@@ -153,6 +159,7 @@ public class Controller {
         }
         saveSetting();
         getWebEngine().load("https://koding.com/IDE");
+        getWebEngine().reload();
         logBox.appendText("系统启动中......\n");
         getWebEngine().getLoadWorker().stateProperty().addListener(new ChangeAction());
         getWebEngine().getLoadWorker().messageProperty().addListener(new ChangeAction());
@@ -166,10 +173,20 @@ public class Controller {
         public void changed(ObservableValue observable, Object oldValue, Object newValue) {
             logBox.appendText("页面有变动,刷新中.\n");
             if (newValue == Worker.State.SUCCEEDED) {
+                String location = getWebEngine().executeScript("location.href").toString();
+                String interval = "500";
+                if (location.indexOf("IDE")>0){
+                    interval = txtInterval.getText()+"*1000*60";
+                }
                 logBox.appendText("页面加载成功,执行JS代码......\n");
-                String reStart = restart.replaceAll("\\{\\{ username }\\}",txtUserName.getText()).replaceAll("\\{\\{ userpasswd \\}\\}",txtPasswd.getText()).replaceAll("\\{\\{ time \\}\\}",txtInterval.getText());
+                String reStart = restart.replaceAll("\\{\\{ username }\\}",txtUserName.getText()).replaceAll("\\{\\{ userpasswd \\}\\}",txtPasswd.getText()).replaceAll("\\{\\{ time \\}\\}",interval);
                 getWebEngine().executeScript(reStart);
             }else {
+                String location = getWebEngine().executeScript("location.href").toString();
+                if (location.indexOf("IDE")>0){
+                    String iworker = worker.replaceAll("\\{\\{ time \\}\\}",txtInterval.getText()+"*1000*60");
+                    getWebEngine().executeScript(iworker);
+                }
                 logBox.appendText(ZonedDateTime.now().toLocalTime()+":"+newValue.toString()+"\n");
             }
         }
