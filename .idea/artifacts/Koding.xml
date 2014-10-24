@@ -16,6 +16,7 @@
       <element id="archive" name="Koding.jar">
         <element id="module-output" name="Koding" />
       </element>
+      <element id="library" level="project" name="fastjson-1.1.40" />
     </root>
   </artifact>
 </component>
