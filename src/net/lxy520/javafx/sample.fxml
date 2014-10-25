@@ -5,18 +5,18 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.web.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="310.0" prefWidth="630.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.lxy520.javafx.Controller">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="224.0" prefWidth="569.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.lxy520.javafx.Controller">
    <children>
-      <Label layoutX="49.0" layoutY="54.0" text="用户名" />
-      <Label layoutX="49.0" layoutY="102.0" text="密码" />
-      <TextField fx:id="txtUserName" layoutX="104.0" layoutY="49.0" promptText="用户名不为空" />
-      <PasswordField fx:id="txtPasswd" layoutX="104.0" layoutY="97.0" promptText="密码不为空" />
-      <Label layoutX="344.0" layoutY="144.0" text="多长时间检查一次(分钟)" />
-      <Label layoutX="49.0" layoutY="144.0" text="启动后多长时间开始检查(分钟)" />
-      <TextField fx:id="txtStart" layoutX="104.0" layoutY="170.0" promptText="单位是分钟" text="5" />
-      <TextField fx:id="txtInterval" layoutX="375.0" layoutY="170.0" promptText="单位是分钟" text="5" />
-      <WebView fx:id="webView" layoutX="638.0" layoutY="-1.0" prefHeight="570.0" prefWidth="942.0" />
-      <Button layoutX="508.0" layoutY="238.0" mnemonicParsing="false" onAction="#start" prefWidth="69.0" text="启动" />
-      <TextArea fx:id="logBox" layoutX="-1.0" layoutY="318.0" prefHeight="245.0" prefWidth="637.0" />
+      <Label layoutX="27.0" layoutY="19.0" text="用户名" />
+      <Label layoutX="27.0" layoutY="67.0" text="密码" />
+      <TextField fx:id="txtUserName" layoutX="82.0" layoutY="14.0" promptText="用户名不为空" />
+      <PasswordField fx:id="txtPasswd" layoutX="82.0" layoutY="62.0" promptText="密码不为空" />
+      <Label layoutX="301.0" layoutY="107.0" text="登陆后检测间隔(分钟)" />
+      <Label layoutX="27.0" layoutY="109.0" text="登陆前检测间隔时间(毫秒)" />
+      <TextField fx:id="txtStart" layoutX="82.0" layoutY="135.0" promptText="单位是分钟" text="1500" />
+      <TextField fx:id="txtInterval" layoutX="332.0" layoutY="133.0" promptText="单位是分钟" text="5" />
+      <WebView fx:id="webView" layoutY="225.0" minHeight="570.0" minWidth="1024.0" prefHeight="570.0" prefWidth="1336.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="225.0" />
+      <Button layoutX="465.0" layoutY="176.0" mnemonicParsing="false" onAction="#start" prefWidth="69.0" text="启动" />
+      <TextArea fx:id="logBox" editable="false" layoutX="571.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="224.0" prefWidth="765.0" AnchorPane.leftAnchor="571.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
    </children>
 </AnchorPane>

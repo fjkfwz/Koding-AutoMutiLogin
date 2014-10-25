@@ -15,7 +15,7 @@ public class Start extends Application {
         controller = fxmlLoader.getController();
         controller.readSetting();
         primaryStage.setTitle("Koding自动重启工具");
-        primaryStage.setScene(new Scene(root, 630, 310));
+        primaryStage.setScene(new Scene(root, 569, 224));
         primaryStage.show();
     }
 

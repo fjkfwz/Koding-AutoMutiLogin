@@ -22,10 +22,7 @@ import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
-import java.time.Clock;
-import java.time.LocalDate;
 import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.List;
 
 public class Controller {
@@ -51,13 +48,14 @@ public class Controller {
         System.out.println("程序启动中......");
     }
 
-    private static final String restart = "function doaction(){\n" +
+    private static final String restart =
+            "function doaction(){\n" +
             "    KD.enableLogs();\n" +
-            "    console.info(\"开始检测....\");\n" +
+            "    console.info(\"开始检测,帐号是否在线....\");\n" +
             "    if(!KD.isLoggedIn()){\n" +
             "        console.info(\"帐号未登陆,检测当前是否在登陆页面....\");\n" +
-            "        if(!(location.href==\"https://koding.com/Login\")&&!(location.href==\"https://koding.com/#!/Login\")){\n" +
-            "            console.info(\"不在登陆页面,正在打开登陆页面....\");\n" +
+            "        if(location.href.indexOf(\"Login\")<0){\n" +
+            "            console.info(\"当前不在登陆页面,正在打开登陆页面....\");\n" +
             "            location.href=\"https://koding.com/Login\"\n" +
             "        }else{\n" +
             "            console.info(\"当前正在登陆界面,登陆中.....\");\n" +
@@ -67,7 +65,7 @@ public class Controller {
             "        }\n" +
             "    }else{\n" +
             "        console.info(\"帐号已在线,检测是否需要重启VM\");\n" +
-            "        if($(\"button.kdbutton.turn-on.state-button.solid.green.medium.with-icon\").prop(\"outerHTML\")){\n" +
+            "        if(KD.userMachines.first.status.state==\"Stopped\"){\n" +
             "            console.info(\"VM已经关闭,正在重启VM....\");\n" +
             "            $(\"button.kdbutton.turn-on.state-button.solid.green.medium.with-icon\").trigger(\"click\");\n" +
             "        }else{\n" +
@@ -75,13 +73,18 @@ public class Controller {
             "        }\n" +
             "    }\n" +
             "}\n" +
+            "doaction();\n" +
+            "console.info(\"核心模块已启动,每隔\"+{{ time }}/(1000*60)+\"分钟检测一次\");\n" +
             "var restart=self.setInterval(\"doaction()\", {{ time }});";
 
-            private static final String worker = "function worker(){\n" +
+    private static final String worker =
+            "function worker(){\n" +
             "    KD.enableLogs();\n" +
             "    location.href=\"https://koding.com/IDE\";\n" +
             "}\n" +
-            "var workerright = self.setTimeout(\"worker()\", {{ time }});";
+            "var workerright = self.setTimeout(\"worker()\", 1000);\n" +
+            "console.info(\"[假死检测模块]已启动,每隔\"+{{ time }}/(1000*60)+\"分钟检测一次\");";
+
     /**
      * 读取用户信息
      */
@@ -89,8 +92,8 @@ public class Controller {
         try {
             File file = new File("setting.json");
             if (file.exists()) {
-               List<String> strings = Files.readAllLines(file.toPath());
-                if (strings!=null && !strings.isEmpty()) {
+                List<String> strings = Files.readAllLines(file.toPath());
+                if (strings != null && !strings.isEmpty()) {
                     Setting set = JSON.parseObject(strings.get(0), Setting.class);//反序列化
                     if (set != null) {
                         setSetting(set);//设置
@@ -107,18 +110,58 @@ public class Controller {
      * 加载用户设置
      */
     public void loadSetting() {
-        if (setting != null) {
-            try {
-                logBox.setText("加载用户设置......\n\n");
-                txtUserName.setText(setting.getUserName());
-                txtPasswd.setText(setting.getPasswd());
-                txtStart.setText(setting.getStart());
-                txtInterval.setText(setting.getInterval());
-                logBox.appendText("加载用户设置成功\n\n");
-            } catch (Exception e1) {
-                logBox.appendText("加载用户设置失败\n\n");
-            }
+        try {
+            logBox.setText("加载用户设置......\n\n");
+            txtUserName.setText(setting.getUserName());
+            txtPasswd.setText(setting.getPasswd());
+            txtStart.setText(setting.getStart());
+            txtInterval.setText(setting.getInterval());
+            logBox.appendText("加载用户设置成功\n\n");
+        } catch (Exception e1) {
+            logBox.appendText("加载用户设置失败\n\n");
         }
+    }
+
+    /**
+     * 临听网页加载
+     */
+    private class ChangeAction implements ChangeListener {
+        @Override
+        public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+            logBox.appendText("页面有变动,刷新中.\n");
+            if (newValue == Worker.State.SUCCEEDED) {
+                logBox.appendText("页面加载成功,载入模块[核心模块]......\n");
+                if (isCurrentURL("IDE")) {
+                    runScript(restart,txtInterval.getText() + "*1000*60");
+                } else {
+                    runScript(restart,txtStart.getText());
+                }
+            }
+            logBox.appendText("在IDE页面,载入模块[假死检测模块]......\n");
+            runScript(worker,txtInterval.getText() + "*1000*60");
+            logBox.appendText(ZonedDateTime.now().toLocalTime() + ":" + newValue.toString() + "\n");
+        }
+    }
+
+    /**
+     * 判断当前URL是否包含KEY字符串
+     * @param key
+     * @return
+     */
+    private boolean isCurrentURL(String key) {
+        String location = getWebEngine().executeScript("location.href").toString();
+        return location.indexOf(key) > 0;
+    }
+
+    /**
+     * 运行JavaScript
+     * @param script
+     * @param interval
+     */
+    private void runScript(String script, String interval) {
+        String iscript = script.replaceAll("\\{\\{ username }\\}", txtUserName.getText()).replaceAll("\\{\\{ userpasswd \\}\\}", txtPasswd.getText()).replaceAll("\\{\\{ time \\}\\}", interval);
+        Object result = getWebEngine().executeScript(iscript);
+        logBox.appendText(result.toString());
     }
 
     /**
@@ -158,38 +201,11 @@ public class Controller {
             return;
         }
         saveSetting();
-        getWebEngine().load("https://koding.com/IDE");
+        getWebEngine().load("https://koding.com/Login");
         getWebEngine().reload();
         logBox.appendText("系统启动中......\n");
         getWebEngine().getLoadWorker().stateProperty().addListener(new ChangeAction());
         getWebEngine().getLoadWorker().messageProperty().addListener(new ChangeAction());
-    }
-
-    /**
-     * 临听网页加载
-     */
-    private class ChangeAction implements ChangeListener {
-        @Override
-        public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-            logBox.appendText("页面有变动,刷新中.\n");
-            if (newValue == Worker.State.SUCCEEDED) {
-                String location = getWebEngine().executeScript("location.href").toString();
-                String interval = "500";
-                if (location.indexOf("IDE")>0){
-                    interval = txtInterval.getText()+"*1000*60";
-                }
-                logBox.appendText("页面加载成功,执行JS代码......\n");
-                String reStart = restart.replaceAll("\\{\\{ username }\\}",txtUserName.getText()).replaceAll("\\{\\{ userpasswd \\}\\}",txtPasswd.getText()).replaceAll("\\{\\{ time \\}\\}",interval);
-                getWebEngine().executeScript(reStart);
-            }else {
-                String location = getWebEngine().executeScript("location.href").toString();
-                if (location.indexOf("IDE")>0){
-                    String iworker = worker.replaceAll("\\{\\{ time \\}\\}",txtInterval.getText()+"*1000*60");
-                    getWebEngine().executeScript(iworker);
-                }
-                logBox.appendText(ZonedDateTime.now().toLocalTime()+":"+newValue.toString()+"\n");
-            }
-        }
     }
 
     /**
@@ -201,14 +217,18 @@ public class Controller {
         this.setting = setting;
     }
 
+    /**
+     * 获得WebEngine
+     * @return
+     */
     public WebEngine getWebEngine() {
         webView.getEngine().setUserAgent("Mozilla/5.0 (ArchLinux Linux 3.16) AppleWebKit/537.36 (KHTML, like Gecko) Maxthon/4.0 Chrome/30.0.1599.101 Safari/537.36");
         return webView.getEngine();
     }
 
     /**
-     * 消息框
-     *
+     * 消息提示窗口
+     * @param title 标题
      * @param message 消息
      */
     private void showMessage(String title, String message) {
