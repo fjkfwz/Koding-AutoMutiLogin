@@ -73,7 +73,9 @@ public class Controller {
             "        }\n" +
             "    }\n" +
             "}\n" +
-            "doaction();\n" +
+            "if(KD.isLoggedIn()){\n" +
+                "    doaction();\n" +
+            "}\n" +
             "console.info(\"核心模块已启动,每隔\"+{{ time }}/(1000*60)+\"分钟检测一次\");\n" +
             "var restart=self.setInterval(\"doaction()\", {{ time }});";
 
@@ -82,8 +84,8 @@ public class Controller {
             "    KD.enableLogs();\n" +
             "    location.href=\"https://koding.com/IDE\";\n" +
             "}\n" +
-            "var workerright = self.setTimeout(\"worker()\", 1000);\n" +
-            "console.info(\"[假死检测模块]已启动,每隔\"+{{ time }}/(1000*60)+\"分钟检测一次\");";
+            "var workerright = self.setTimeout(\"worker()\", {{ time }});\n" +
+            "console.info(\"[假死检测模块]已启动,\"+{{ time }}/(1000*60)+\"分钟后再次检测\");";
 
     /**
      * 读取用户信息
@@ -137,7 +139,7 @@ public class Controller {
                     runScript(restart,txtStart.getText());
                 }
             }
-            logBox.appendText("在IDE页面,载入模块[假死检测模块]......\n");
+            logBox.appendText("载入模块[假死检测模块]......\n");
             runScript(worker,txtInterval.getText() + "*1000*60");
             logBox.appendText(ZonedDateTime.now().toLocalTime() + ":" + newValue.toString() + "\n");
         }
@@ -161,7 +163,9 @@ public class Controller {
     private void runScript(String script, String interval) {
         String iscript = script.replaceAll("\\{\\{ username }\\}", txtUserName.getText()).replaceAll("\\{\\{ userpasswd \\}\\}", txtPasswd.getText()).replaceAll("\\{\\{ time \\}\\}", interval);
         Object result = getWebEngine().executeScript(iscript);
-        logBox.appendText(result.toString());
+        if (!result.equals("undefined")){
+            logBox.appendText(result.toString()+"\n");
+        }
     }
 
     /**
